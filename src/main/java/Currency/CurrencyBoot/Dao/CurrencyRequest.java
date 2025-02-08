@@ -11,18 +11,27 @@ public class CurrencyRequest {
     private String to;
     private BigDecimal amount;
 
-    public String getFrom() 
-    { return from; }
-    public void setFrom(String from) { this.from = from; }
+    public String getFrom() {
+        return from;
+    }
 
-    public String getTo() { return to; }
-    public void setTo(String to) { this.to = to; }
+    public void setFrom(String from) {
+        this.from = from;
+    }
 
-    public BigDecimal getAmount() { return amount; }
-    public void setAmount(BigDecimal amount) { this.amount = amount; }
+    public String getTo() {
+        return to;
+    }
 
-    @Override
-    public String toString() {
-        return "CurrencyRequest{from='" + from + "', to='" + to + "', amount=" + amount + "}";
+    public void setTo(String to) {
+        this.to = to;
+    }
+
+    public BigDecimal getAmount() {
+        return amount;
+    }
+
+    public void setAmount(BigDecimal amount) {
+        this.amount = amount;
     }
 }

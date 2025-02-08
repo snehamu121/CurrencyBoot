@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -12,7 +13,10 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
+import com.fasterxml.jackson.databind.deser.Deserializers.Base;
 
 import Currency.CurrencyBoot.Dao.CurrencyRequest;
 import Currency.CurrencyBoot.Dao.CurrencyResponse;
@@ -22,30 +26,31 @@ import Currency.CurrencyBoot.Service.CurrencyService;
 @RequestMapping("/api")
 public class CurrencyController {
 	
-	@Autowired
-	private final CurrencyService currencyService;
+	@Autowired  // Add this annotation to inject the service
+    private CurrencyService currencyService;
 
-    public CurrencyController(CurrencyService currencyService) {
-        this.currencyService = currencyService;
-    }
-	
-	@GetMapping("/rates")
-    public ResponseEntity<Map<String, BigDecimal>> getExchangeRates() {
-        Map<String, BigDecimal> rates = currencyService.getExchangeRates();
-        return ResponseEntity.ok(rates);
+    @GetMapping("/rates")
+    public Map<String, Object> getExchangeRates(@RequestParam(defaultValue = "USD") String base) {
+        return currencyService.getExchangeRates(base);
     }
 
-	@PostMapping("/convert")
-	public ResponseEntity<?> convert(@RequestBody CurrencyRequest request) {
-	    System.out.println("Received request: " + request);
+    @PostMapping("/convert")
+    public ResponseEntity<?> convert(@RequestBody CurrencyRequest request) {
+        try {
+            // Validate that required fields are not null
+            if (request.getFrom() == null || request.getTo() == null || request.getAmount() == null) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(Collections.singletonMap("error", "Missing required fields"));
+            }
 
-	    if (request.getFrom() == null || request.getTo() == null || request.getAmount() == null) {
-	        Map<String, String> errorResponse = new HashMap<>();
-	        errorResponse.put("error", "Missing required fields");
-	        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
-	    }
+            // Perform currency conversion
+            BigDecimal convertedAmount = currencyService.convertCurrency(request.getFrom(), request.getTo(), request.getAmount());
 
-	    BigDecimal convertedAmount = currencyService.convertCurrency(request.getFrom(), request.getTo(), request.getAmount());
-	    return ResponseEntity.ok(new CurrencyResponse(request.getFrom(), request.getTo(), request.getAmount(), convertedAmount));
-	}
+            // Return response
+            return ResponseEntity.ok(new CurrencyResponse(request.getFrom(), request.getTo(), request.getAmount(), convertedAmount));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Collections.singletonMap("error", e.getMessage()));
+        }
+    }
 }

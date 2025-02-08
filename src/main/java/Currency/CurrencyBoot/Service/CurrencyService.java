@@ -13,37 +13,40 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 
-import Currency.CurrencyBoot.Dao.ExchangeRateResponse;
+
 
 @Service
 public class CurrencyService {
 
-	private static final Map<String, BigDecimal> exchangeRates = new HashMap<>();
+	private static final String API_URL = "https://api.exchangerate-api.com/v4/latest/";
 
-    // Initializing exchange rates
-    static {
-        exchangeRates.put("USD", BigDecimal.ONE);
-        exchangeRates.put("EUR", new BigDecimal("0.85"));
-        exchangeRates.put("INR", new BigDecimal("74.5"));
-        exchangeRates.put("GBP", new BigDecimal("0.75"));
-        exchangeRates.put("JPY", new BigDecimal("110.0"));
+    private final RestTemplate restTemplate;
+
+    public CurrencyService() {
+        this.restTemplate = new RestTemplate();
     }
 
-    // Fetch exchange rates
-    public Map<String, BigDecimal> getExchangeRates() {
-        return exchangeRates;
+    // Method to fetch exchange rates for a given base currency
+    public Map<String, Object> getExchangeRates(String base) {
+        String url = API_URL + base;
+        return restTemplate.getForObject(url, Map.class);
     }
 
-    // Convert currency
+    // Method to convert currency from one type to another
     public BigDecimal convertCurrency(String from, String to, BigDecimal amount) {
-        if (!exchangeRates.containsKey(from) || !exchangeRates.containsKey(to)) {
-            throw new IllegalArgumentException("Invalid currency code: " + from + " or " + to);
-        }
+        Map<String, Object> response = getExchangeRates(from);
         
-        BigDecimal fromRate = exchangeRates.get(from);
-        BigDecimal toRate = exchangeRates.get(to);
+        if (response == null || !response.containsKey("rates")) {
+            throw new RuntimeException("Failed to fetch exchange rates");
+        }
 
-        // Convert amount
-        return amount.multiply(toRate).divide(fromRate, 2, BigDecimal.ROUND_HALF_UP);
+        Map<String, Object> rates = (Map<String, Object>) response.get("rates");
+
+        if (!rates.containsKey(to)) {
+            throw new IllegalArgumentException("Invalid currency code: " + to);
+        }
+
+        BigDecimal exchangeRate = new BigDecimal(rates.get(to).toString());
+        return amount.multiply(exchangeRate);
     }
 }
